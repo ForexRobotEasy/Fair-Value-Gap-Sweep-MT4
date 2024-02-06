@@ -1,0 +1,104 @@
+mql5
+//+------------------------------------------------------------------+
+//|                              Fair Value Gap Sweep MT4            |
+//|                     https://www.forexroboteasy.com                |
+//|                            Forex Robot Easy Team                  |
+//+------------------------------------------------------------------+
+#property copyright 'Forex Robot Easy Team'
+#property link      'https://www.forexroboteasy.com'
+#property version   '1.00'
+#property strict
+
+//+------------------------------------------------------------------+
+//| Global variables                                                  |
+//+------------------------------------------------------------------+
+int gapColorBullish = clrDodgerBlue; // Color for bullish gaps
+int gapColorBearish = clrFireBrick; // Color for bearish gaps
+int gapStyle = STYLE_SOLID; // Style for gap lines
+int gapWidth = 2; // Width for gap lines
+bool soundAlert = true; // Enable sound alert
+bool emailAlert = true; // Enable email alert
+bool pushAlert = true; // Enable push notification
+
+//+------------------------------------------------------------------+
+//| Custom indicator initialization function                         |
+//+------------------------------------------------------------------+
+int OnInit()
+{
+    // Indicator parameters initialization
+    IndicatorShortName('Fair Value Gap Sweep MT4');
+    SetIndexStyle(0, DRAW_LINE, gapStyle, gapWidth);
+    SetIndexBuffer(0, NULL);
+    
+    return(INIT_SUCCEEDED);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator deinitialization function                       |
+//+------------------------------------------------------------------+
+void OnDeinit(const int reason)
+{
+    // Clear indicator buffers
+    SetIndexBuffer(0, NULL);
+}
+
+//+------------------------------------------------------------------+
+//| Custom indicator iteration function                              |
+//+------------------------------------------------------------------+
+int OnCalculate(const int rates_total,
+                const int prev_calculated,
+                const datetime &time[],
+                const double &open[],
+                const double &high[],
+                const double &low[],
+                const double &close[],
+                const long &tick_volume[],
+                const long &volume[],
+                const int &spread[])
+{
+    // Detect and draw fair value gaps
+    for(int i = MathMax(0, prev_calculated - 1); i < rates_total; i++)
+    {
+        if(IsGap(i))
+        {
+            DrawGap(i);
+            if(soundAlert)
+                Alert('Fair value gap detected at ', TimeToStr(time[i], TIME_DATE|TIME_MINUTES));
+            if(emailAlert)
+                SendMail('Fair Value Gap Alert', 'A fair value gap has been detected.');
+            if(pushAlert)
+                SendNotification('Fair Value Gap Alert', 'A fair value gap has been detected.', 'MetaTrader 4', 0);
+        }
+    }
+    
+    return(rates_total);
+}
+
+//+------------------------------------------------------------------+
+//| Function to check if a gap exists                                 |
+//+------------------------------------------------------------------+
+bool IsGap(const int index)
+{
+    double previousClose = close[index - 1];
+    double currentOpen = open[index];
+    double gap = currentOpen - previousClose;
+    
+    return (gap > 0 && currentOpen > previousClose) || (gap < 0 && currentOpen < previousClose);
+}
+
+//+------------------------------------------------------------------+
+//| Function to draw the fair value gap                               |
+//+------------------------------------------------------------------+
+void DrawGap(const int index)
+{
+    double previousClose = close[index - 1];
+    double currentOpen = open[index];
+    double gap = currentOpen - previousClose;
+    
+    int color = gap > 0 ? gapColorBullish : gapColorBearish;
+    
+    // Draw a line for the fair value gap
+    ObjectCreate('Gap'+index, OBJ_TREND, 0, Time[index-1], previousClose, Time[index], currentOpen);
+    ObjectSet('Gap'+index, OBJPROP_COLOR, color);
+}
+
